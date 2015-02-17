@@ -1,0 +1,37 @@
+server {
+    listen 80;
+    server_name {{ project_name }}.loc;
+    root {{ project_dir }};
+
+    ##
+    # Increase fastcgi buffer size
+    ##
+    fastcgi_buffers 8 16k;
+    fastcgi_buffer_size 32k;
+    fastcgi_connect_timeout 300;
+    fastcgi_send_timeout 300;
+    fastcgi_read_timeout 300;
+
+    location / {
+        # try to serve file directly, fallback to rewrite
+        try_files $uri @rewriteapp;
+        fastcgi_read_timeout 3600s;
+    }
+
+    location @rewriteapp {
+        # rewrite all to app_dev.php
+        rewrite ^(.*)$ /app_dev.php/$1 last;
+        fastcgi_read_timeout 3600s;
+    }
+
+    location ~ ^/(app|app_dev|config)\.php(/|$) {
+        fastcgi_pass unix:/var/run/php5-fpm.sock;
+        # fastcgi_pass 127.0.0.1:9000;
+        fastcgi_split_path_info ^(.+\.php)(/.*)$;
+        include fastcgi_params;
+        fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;
+        fastcgi_param HTTPS off;
+        fastcgi_read_timeout 3600s;
+    }
+
+}
